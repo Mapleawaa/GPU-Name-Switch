@@ -1,5 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using GpuSpoofer.Data;
 using GpuSpoofer.Models;
@@ -28,6 +30,7 @@ public partial class MainWindow : Window
         try
         {
             ApplyTheme();
+            ApplyDarkTitleBar();
             AppLogger.Info("主题应用完成");
             RefreshGpuList();
             AppLogger.Info("GPU 列表刷新完成");
@@ -38,6 +41,29 @@ public partial class MainWindow : Window
             throw;
         }
     }
+
+    private void ApplyDarkTitleBar()
+    {
+        if (!ThemeService.IsDarkMode) return;
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).EnsureHandle();
+            if (hwnd == nint.Zero) return;
+            int useDark = 1;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ref useDark, Marshal.SizeOf<int>());
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("深色标题栏设置失败", ex);
+        }
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int attr,
+        ref int attrValue, int attrSize);
+
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
     private void ApplyTheme()
     {

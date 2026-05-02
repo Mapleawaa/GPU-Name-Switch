@@ -6,6 +6,7 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
         FontFamily="Microsoft YaHei UI"
+        Background="{DynamicResource WinBg}"
         Loaded="Window_Loaded">
 
     <Window.Resources>
