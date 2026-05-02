@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:GpuSpoofer"
              xmlns:conv="clr-namespace:GpuSpoofer.Converters"
-             StartupUri="MainWindow.xaml">
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <conv:VendorColorConverter x:Key="VendorColor"/>
     </Application.Resources>

@@ -92,10 +92,38 @@ public partial class App : System.Windows.Application
             };
 
             AppLogger.Info("启动完成，打开主窗口");
+
+            // 手动创建主窗口 (不用 StartupUri 避免 BAML 加载时序问题)
+            CreateMainWindow();
         }
         catch (Exception ex)
         {
             AppLogger.Error("启动失败", ex);
+            throw;
+        }
+    }
+
+    private static void CreateMainWindow()
+    {
+        try
+        {
+            AppLogger.Info("开始创建 MainWindow");
+            var win = new MainWindow();
+            Current.MainWindow = win;
+
+            win.Closing += (_, e) =>
+            {
+                e.Cancel = true;
+                win.Hide();
+                AppLogger.Info("窗口最小化到托盘");
+            };
+
+            win.Show();
+            AppLogger.Info("MainWindow.Show() 完成");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("创建 MainWindow 失败", ex);
             throw;
         }
     }

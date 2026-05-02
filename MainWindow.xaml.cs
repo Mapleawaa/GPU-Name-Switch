@@ -20,13 +20,6 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         AppLogger.Info("MainWindow 初始化完成");
-
-        Closing += (_, e) =>
-        {
-            e.Cancel = true;
-            Hide();
-            AppLogger.Info("窗口最小化到托盘");
-        };
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
