@@ -180,6 +180,9 @@ public partial class MainWindow : Window
 
     private void FilterPresets()
     {
+        if (ChkNvidia == null || ChkAmd == null || ChkIntel == null) return;
+        if (SearchBox == null || PresetListBox == null) return;
+
         var presets = GpuPresets.All.AsEnumerable();
 
         var vendors = new List<string>();
@@ -202,6 +205,7 @@ public partial class MainWindow : Window
 
     private void UpdateApplyButtonState()
     {
+        if (CustomNameBox == null || ApplyButton == null) return;
         var hasCustomName = !string.IsNullOrWhiteSpace(CustomNameBox.Text);
         ApplyButton.IsEnabled = _selectedGpu != null && hasCustomName;
     }
