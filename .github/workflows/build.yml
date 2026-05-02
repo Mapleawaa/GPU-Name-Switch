@@ -31,14 +31,22 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
-      - name: Publish (self-contained)
+      - name: Publish
         run: >
           dotnet publish -c Release
           -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
           -o publish
+
+      - name: Strip PDB
+        run: |
+          Remove-Item -Path publish\*.pdb -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path publish\*.xml -Force -ErrorAction SilentlyContinue
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -58,12 +66,12 @@ jobs:
           name: GpuSpoofer
           path: publish
 
-      - name: Zip artifact
+      - name: Zip
         run: |
           cd publish
           zip -r ../GpuSpoofer.zip .
 
-      - name: Create GitHub Release
+      - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
