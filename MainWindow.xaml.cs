@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using GpuSpoofer.Data;
 using GpuSpoofer.Models;
 using GpuSpoofer.Services;
+using SWM = System.Windows.Media;
 
 namespace GpuSpoofer;
 
@@ -19,16 +19,36 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AppLogger.Info("MainWindow 初始化完成");
+
+        Closing += (_, e) =>
+        {
+            e.Cancel = true;
+            Hide();
+            AppLogger.Info("窗口最小化到托盘");
+        };
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        ApplyTheme();
-        RefreshGpuList();
+        AppLogger.Info("Window_Loaded 开始");
+        try
+        {
+            ApplyTheme();
+            AppLogger.Info("主题应用完成");
+            RefreshGpuList();
+            AppLogger.Info("GPU 列表刷新完成");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("Window_Loaded 异常", ex);
+            throw;
+        }
     }
 
     private void ApplyTheme()
     {
+        ThemeService.Initialize();
         var r = Resources;
 
         r["WinBg"]       = ThemeService.WindowBg;
@@ -249,13 +269,13 @@ public partial class MainWindow : Window
 
     private void Reboot_Click(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show(
+        var result = System.Windows.MessageBox.Show(
             "确定要立即重启系统吗？\n\n请确保已保存所有工作。",
             "确认重启",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
 
-        if (result == MessageBoxResult.Yes)
+        if (result == System.Windows.MessageBoxResult.Yes)
         {
             try
             {
@@ -288,12 +308,12 @@ public partial class MainWindow : Window
     private void SetWarningStatus(string msg)
     {
         StatusText.Text = msg;
-        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xD8, 0x3B, 0x01));
+        StatusText.Foreground = new SWM.SolidColorBrush(SWM.Color.FromRgb(0xD8, 0x3B, 0x01));
     }
 
     private void SetSuccessStatus(string msg)
     {
         StatusText.Text = msg;
-        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10));
+        StatusText.Foreground = new SWM.SolidColorBrush(SWM.Color.FromRgb(0x10, 0x7C, 0x10));
     }
 }

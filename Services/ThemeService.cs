@@ -4,12 +4,26 @@ namespace GpuSpoofer.Services;
 
 public static class ThemeService
 {
+    private static bool _initialized;
+
     public static bool IsDarkMode { get; private set; }
 
-    static ThemeService()
+    public static void Initialize()
     {
-        DetectTheme();
-        SystemEvents.UserPreferenceChanged += (_, _) => DetectTheme();
+        if (_initialized) return;
+        _initialized = true;
+
+        try
+        {
+            DetectTheme();
+            SystemEvents.UserPreferenceChanged += (_, _) => DetectTheme();
+            AppLogger.Info($"主题检测完成: {(IsDarkMode ? "深色" : "浅色")}");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("主题初始化失败", ex);
+            IsDarkMode = false;
+        }
     }
 
     private static void DetectTheme()
@@ -21,13 +35,13 @@ public static class ThemeService
             var value = key?.GetValue("AppsUseLightTheme");
             IsDarkMode = value is 0;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Error("主题检测失败", ex);
             IsDarkMode = false;
         }
     }
 
-    // 主题感知的画笔
     public static System.Windows.Media.SolidColorBrush CardBg => IsDarkMode
         ? new(FromHex("#2D2D2D"))
         : new(FromHex("#FAFAFA"));

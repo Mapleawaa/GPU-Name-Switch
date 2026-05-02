@@ -1,16 +1,16 @@
-using System.Windows;
+using SW = System.Windows;
 
 namespace GpuSpoofer;
 
-public partial class WhyDialog : Window
+public partial class WhyDialog : SW.Window
 {
     public WhyDialog()
     {
         InitializeComponent();
-        Owner = Application.Current.MainWindow;
+        Owner = SW.Application.Current.MainWindow;
     }
 
-    private void Close_Click(object sender, RoutedEventArgs e)
+    private void Close_Click(object sender, SW.RoutedEventArgs e)
     {
         Close();
     }

@@ -12,11 +12,14 @@ public static class GpuDetector
     {
         var gpus = new List<GpuInfo>();
 
-        using var searcher = new ManagementObjectSearcher(
-            @"SELECT Name, PNPDeviceID, AdapterCompatibility
-              FROM Win32_VideoController");
+        try
+        {
+            AppLogger.Info("WMI 查询开始");
+            using var searcher = new ManagementObjectSearcher(
+                @"SELECT Name, PNPDeviceID, AdapterCompatibility
+                  FROM Win32_VideoController");
 
-        foreach (var obj in searcher.Get())
+            foreach (var obj in searcher.Get())
         {
             var name = obj["Name"]?.ToString() ?? "未知显卡";
             var pnpId = obj["PNPDeviceID"]?.ToString() ?? "";
@@ -32,6 +35,13 @@ public static class GpuDetector
             ReadRegistryInfo(gpu);
 
             gpus.Add(gpu);
+            }
+
+            AppLogger.Info($"WMI 查询完成，共 {gpus.Count} 个设备 (真实: {gpus.Count(g => !g.IsHidden)}, 隐藏: {gpus.Count(g => g.IsHidden)})");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("GPU 检测失败", ex);
         }
 
         return gpus;
