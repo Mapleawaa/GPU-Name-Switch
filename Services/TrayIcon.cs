@@ -8,6 +8,7 @@ public sealed class TrayIcon : IDisposable
     private readonly nint _hwnd;
     private readonly uint _id;
     private bool _visible;
+    private readonly WndProcDelegate _wndProc; // 防 GC 回收
 
     public event Action? ShowClicked;
     public event Action? ExitClicked;
@@ -15,6 +16,7 @@ public sealed class TrayIcon : IDisposable
     public TrayIcon(string tooltip, Icon icon)
     {
         _id = 1;
+        _wndProc = WndProc; // 持久化委托引用
         _hwnd = CreateMessageWindow();
 
         var data = new NOTIFYICONDATA
@@ -30,19 +32,6 @@ public sealed class TrayIcon : IDisposable
 
         Shell_NotifyIcon(NIM_ADD, ref data);
         _visible = true;
-    }
-
-    public void SetTooltip(string text)
-    {
-        var data = new NOTIFYICONDATA
-        {
-            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-            hWnd = _hwnd,
-            uID = _id,
-            uFlags = NIF_TIP,
-            szTip = text
-        };
-        Shell_NotifyIcon(NIM_MODIFY, ref data);
     }
 
     public void Dispose()
@@ -65,34 +54,42 @@ public sealed class TrayIcon : IDisposable
     private nint CreateMessageWindow()
     {
         var hInstance = GetModuleHandle(nint.Zero);
+        var className = "GpuSpooferTrayWnd";
         var wc = new WNDCLASS
         {
-            lpfnWndProc = WndProc,
+            lpfnWndProc = _wndProc,
             hInstance = hInstance,
-            lpszClassName = "GpuSpooferTray"
+            lpszClassName = className
         };
         RegisterClass(ref wc);
-        return CreateWindowEx(0, "GpuSpooferTray", "", 0, 0, 0, 0, 0,
+        return CreateWindowEx(0, className, "", 0, 0, 0, 0, 0,
             nint.Zero, nint.Zero, hInstance, nint.Zero);
     }
 
     private nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
-        if (msg == WM_TRAYICON && (uint)lParam == WM_RBUTTONUP)
+        try
         {
-            ShowContextMenu();
+            if (msg == WM_TRAYICON && (uint)lParam == WM_RBUTTONUP)
+            {
+                ShowContextMenu();
+            }
+            else if (msg == WM_TRAYICON && (uint)lParam == WM_LBUTTONDBLCLK)
+            {
+                ShowClicked?.Invoke();
+            }
+            else if (msg == WM_COMMAND && (uint)wParam == 1)
+            {
+                ShowClicked?.Invoke();
+            }
+            else if (msg == WM_COMMAND && (uint)wParam == 2)
+            {
+                ExitClicked?.Invoke();
+            }
         }
-        else if (msg == WM_TRAYICON && (uint)lParam == WM_LBUTTONDBLCLK)
+        catch (Exception ex)
         {
-            ShowClicked?.Invoke();
-        }
-        else if (msg == WM_COMMAND && (uint)wParam == 1)
-        {
-            ShowClicked?.Invoke();
-        }
-        else if (msg == WM_COMMAND && (uint)wParam == 2)
-        {
-            ExitClicked?.Invoke();
+            AppLogger.Error("TrayIcon WndProc 异常", ex);
         }
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
@@ -111,21 +108,21 @@ public sealed class TrayIcon : IDisposable
         DestroyMenu(menu);
     }
 
-    // Win32 API
-    private const uint WM_TRAYICON = 0x8000;
-    private const uint WM_RBUTTONUP = 0x0205;
-    private const uint WM_LBUTTONDBLCLK = 0x0203;
-    private const uint WM_COMMAND = 0x0111;
-    private const uint NIF_MESSAGE = 0x1;
-    private const uint NIF_ICON = 0x2;
-    private const uint NIF_TIP = 0x4;
-    private const uint NIM_ADD = 0x0;
-    private const uint NIM_MODIFY = 0x1;
-    private const uint NIM_DELETE = 0x2;
-    private const uint MF_STRING = 0x0;
-    private const uint MF_SEPARATOR = 0x800;
-    private const uint TPM_RIGHTBUTTON = 0x2;
+    // Win32 constants
+    private const uint WM_TRAYICON       = 0x8000;
+    private const uint WM_RBUTTONUP      = 0x0205;
+    private const uint WM_LBUTTONDBLCLK  = 0x0203;
+    private const uint WM_COMMAND        = 0x0111;
+    private const uint NIF_MESSAGE       = 0x1;
+    private const uint NIF_ICON          = 0x2;
+    private const uint NIF_TIP           = 0x4;
+    private const uint NIM_ADD           = 0x0;
+    private const uint NIM_DELETE        = 0x2;
+    private const uint MF_STRING         = 0x0;
+    private const uint MF_SEPARATOR      = 0x800;
+    private const uint TPM_RIGHTBUTTON   = 0x2;
 
+    // Structs
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NOTIFYICONDATA
     {
@@ -139,7 +136,7 @@ public sealed class TrayIcon : IDisposable
         public string szTip;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WNDCLASS
     {
         public uint style;
@@ -156,13 +153,14 @@ public sealed class TrayIcon : IDisposable
 
     private delegate nint WndProcDelegate(nint hWnd, uint msg, nint wParam, nint lParam);
 
+    // P/Invoke
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool Shell_NotifyIcon(uint dwMessage, ref NOTIFYICONDATA lpData);
 
-    [DllImport("user32.dll")]
-    private static extern nint CreateWindowEx(uint dwExStyle, string lpClassName, string lpWindowName,
-        uint dwStyle, int x, int y, int nWidth, int nHeight, nint hWndParent, nint hMenu,
-        nint hInstance, nint lpParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern nint CreateWindowEx(uint dwExStyle, string lpClassName,
+        string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight,
+        nint hWndParent, nint hMenu, nint hInstance, nint lpParam);
 
     [DllImport("user32.dll")]
     private static extern bool DestroyWindow(nint hWnd);
@@ -173,13 +171,13 @@ public sealed class TrayIcon : IDisposable
     [DllImport("kernel32.dll")]
     private static extern nint GetModuleHandle(nint lpModuleName);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern ushort RegisterClass(ref WNDCLASS lpWndClass);
 
     [DllImport("user32.dll")]
     private static extern nint CreatePopupMenu();
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern bool AppendMenu(nint hMenu, uint uFlags, uint uIDNewItem, string lpNewItem);
 
     [DllImport("user32.dll")]
