@@ -31,7 +31,7 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
-      - name: Publish
+      - name: Publish (自包含 · 带运行时)
         run: >
           dotnet publish -c Release
           -r win-x64
@@ -41,18 +41,36 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:DebugType=none
           -p:DebugSymbols=false
-          -o publish
+          -o publish/full
 
-      - name: Strip PDB
+      - name: Publish (框架依赖 · 不带运行时)
+        run: >
+          dotnet publish -c Release
+          -r win-x64
+          --self-contained false
+          -p:PublishSingleFile=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -o publish/lite
+
+      - name: Strip junk
         run: |
-          Remove-Item -Path publish\*.pdb -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path publish\*.xml -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path publish\full\*.pdb  -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path publish\full\*.xml  -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path publish\lite\*.pdb -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path publish\lite\*.xml -Force -ErrorAction SilentlyContinue
 
-      - name: Upload artifact
+      - name: Upload (full)
         uses: actions/upload-artifact@v4
         with:
-          name: GpuSpoofer
-          path: publish/
+          name: GpuSpoofer_full
+          path: publish/full/
+
+      - name: Upload (lite)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GpuSpoofer_lite
+          path: publish/lite/
 
   release:
     needs: build
@@ -60,16 +78,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifact
+      - name: Download (full)
         uses: actions/download-artifact@v4
         with:
-          name: GpuSpoofer
-          path: publish
+          name: GpuSpoofer_full
+          path: full
 
-      - name: Zip
-        run: |
-          cd publish
-          zip -r ../GpuSpoofer.zip .
+      - name: Download (lite)
+        uses: actions/download-artifact@v4
+        with:
+          name: GpuSpoofer_lite
+          path: lite
+
+      - name: Zip (full)
+        run: cd full && zip -r ../GpuSpoofer_full.zip .
+
+      - name: Zip (lite)
+        run: cd lite && zip -r ../GpuSpoofer_lite.zip .
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
@@ -78,14 +103,23 @@ jobs:
           body: |
             ## 下载
 
-            点击下方 **GpuSpoofer.zip** 下载，解压后以管理员身份运行 `GpuSpoofer.exe`。
+            | 版本 | 文件 | 大小 | 适用场景 |
+            |------|------|------|---------|
+            | **自包含** | `GpuSpoofer_full.zip` | ~35 MB | 懒得装运行时的用户，下载解压即用 |
+            | **框架依赖** | `GpuSpoofer_lite.zip` | ~200 KB | 已安装 .NET 10 运行时的用户 |
 
-            ## SHA256
+            > 经常打游戏的电脑大概率已有 .NET 运行时（很多游戏依赖它），选 Lite 版即可。
+            > 如果不确定，直接下载 Full 版，解压后以管理员身份运行 `GpuSpoofer.exe`。
+
+            ## 验证
 
             ```
-            ${{ hashFiles('GpuSpoofer.zip') }}
+            GpuSpoofer_full.zip  SHA256: ${{ hashFiles('GpuSpoofer_full.zip') }}
+            GpuSpoofer_lite.zip  SHA256: ${{ hashFiles('GpuSpoofer_lite.zip') }}
             ```
-          files: GpuSpoofer.zip
+          files: |
+            GpuSpoofer_full.zip
+            GpuSpoofer_lite.zip
           draft: false
           prerelease: ${{ contains(github.ref_name, 'pre') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
           generate_release_notes: true
