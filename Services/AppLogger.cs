@@ -25,8 +25,19 @@ public static class AppLogger
     public static void Error(string msg, Exception? ex = null,
         [CallerMemberName] string caller = "")
     {
-        var text = ex is null ? msg : $"{msg} | {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
-        Write("ERROR", text, caller);
+        var sb = new System.Text.StringBuilder();
+        sb.Append(msg);
+        var current = ex;
+        var depth = 0;
+        while (current is not null)
+        {
+            sb.Append($"\n  [{depth}] {current.GetType().Name}: {current.Message}");
+            if (current.StackTrace is not null)
+                sb.Append($"\n  {current.StackTrace}");
+            current = current.InnerException;
+            depth++;
+        }
+        Write("ERROR", sb.ToString(), caller);
     }
 
     public static string LogPath => Path.Combine(LogDir, "app.log");

@@ -3,14 +3,13 @@ using System.Drawing;
 using System.IO;
 using System.Windows;
 using GpuSpoofer.Services;
-using Forms = System.Windows.Forms;
 
 namespace GpuSpoofer;
 
 public partial class App : System.Windows.Application
 {
     private static SingleInstance? _single;
-    private Forms.NotifyIcon? _trayIcon;
+    private TrayIcon? _trayIcon;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -27,7 +26,8 @@ public partial class App : System.Windows.Application
             var ex = args.ExceptionObject as Exception;
             AppLogger.Error("未处理异常 (AppDomain)", ex);
             if (!Debugger.IsAttached)
-                System.Windows.MessageBox.Show($"发生致命错误:\n{ex?.Message}\n\n详情见日志:\n{AppLogger.LogPath}",
+                System.Windows.MessageBox.Show(
+                    $"发生致命错误:\n{ex?.Message}\n\n详情见日志:\n{AppLogger.LogPath}",
                     "GPU 名称切换器", MessageBoxButton.OK, MessageBoxImage.Error);
         };
 
@@ -36,7 +36,8 @@ public partial class App : System.Windows.Application
             AppLogger.Error("未处理异常 (Dispatcher)", args.Exception);
             args.Handled = true;
             if (!Debugger.IsAttached)
-                System.Windows.MessageBox.Show($"发生错误:\n{args.Exception.Message}\n\n详情见日志:\n{AppLogger.LogPath}",
+                System.Windows.MessageBox.Show(
+                    $"发生错误:\n{args.Exception.Message}\n\n详情见日志:\n{AppLogger.LogPath}",
                     "GPU 名称切换器", MessageBoxButton.OK, MessageBoxImage.Warning);
         };
 
@@ -58,8 +59,10 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            // 系统托盘图标
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "app.ico");
+            // 托盘图标
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "icon", "app.ico");
+            if (!File.Exists(iconPath))
+                iconPath = Path.Combine(AppContext.BaseDirectory, "app.ico");
             if (!File.Exists(iconPath))
                 iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
 
@@ -67,30 +70,26 @@ public partial class App : System.Windows.Application
             try
             {
                 icon = new Icon(iconPath);
+                AppLogger.Info($"图标加载成功: {iconPath}");
             }
-            catch
+            catch (Exception ex)
             {
-                AppLogger.Info("未找到图标文件，使用默认图标");
+                AppLogger.Error("图标加载失败，使用默认", ex);
                 icon = SystemIcons.Application;
             }
 
-            _trayIcon = new Forms.NotifyIcon
+            _trayIcon = new TrayIcon("GPU 名称切换器", icon);
+            _trayIcon.ShowClicked += () =>
             {
-                Icon = icon,
-                Text = "GPU 名称切换器",
-                Visible = true
+                AppLogger.Info("托盘: 显示主窗口");
+                ShowMainWindow();
             };
-
-            _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
-            _trayIcon.ContextMenuStrip = new Forms.ContextMenuStrip();
-            _trayIcon.ContextMenuStrip.Items.Add("显示主窗口", null, (_, _) => ShowMainWindow());
-            _trayIcon.ContextMenuStrip.Items.Add("-");
-            _trayIcon.ContextMenuStrip.Items.Add("退出", null, (_, _) =>
+            _trayIcon.ExitClicked += () =>
             {
-                _trayIcon.Visible = false;
-                _trayIcon.Dispose();
+                AppLogger.Info("托盘: 退出");
+                _trayIcon?.Dispose();
                 Shutdown();
-            });
+            };
 
             AppLogger.Info("启动完成，打开主窗口");
         }

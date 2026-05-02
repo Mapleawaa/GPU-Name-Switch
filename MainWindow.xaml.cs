@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using GpuSpoofer.Data;
 using GpuSpoofer.Models;
 using GpuSpoofer.Services;
-using SWM = System.Windows.Media;
 
 namespace GpuSpoofer;
 
@@ -269,13 +269,13 @@ public partial class MainWindow : Window
 
     private void Reboot_Click(object sender, RoutedEventArgs e)
     {
-        var result = System.Windows.MessageBox.Show(
+        var result = MessageBox.Show(
             "确定要立即重启系统吗？\n\n请确保已保存所有工作。",
             "确认重启",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning);
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
 
-        if (result == System.Windows.MessageBoxResult.Yes)
+        if (result == MessageBoxResult.Yes)
         {
             try
             {
@@ -308,12 +308,12 @@ public partial class MainWindow : Window
     private void SetWarningStatus(string msg)
     {
         StatusText.Text = msg;
-        StatusText.Foreground = new SWM.SolidColorBrush(SWM.Color.FromRgb(0xD8, 0x3B, 0x01));
+        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xD8, 0x3B, 0x01));
     }
 
     private void SetSuccessStatus(string msg)
     {
         StatusText.Text = msg;
-        StatusText.Foreground = new SWM.SolidColorBrush(SWM.Color.FromRgb(0x10, 0x7C, 0x10));
+        StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10));
     }
 }
