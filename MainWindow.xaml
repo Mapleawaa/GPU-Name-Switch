@@ -1,0 +1,408 @@
+<Window x:Class="GpuSpoofer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GPU 名称切换器" Height="640" Width="960"
+        MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        FontFamily="Microsoft YaHei UI"
+        Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <!-- 主题颜色画笔(默认浅色,运行时通过 DynamicResource 切换) -->
+        <SolidColorBrush x:Key="WinBg"        Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="CardBg"       Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="CardBorderC" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TitleText"    Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="BodyText"     Color="#666666"/>
+        <SolidColorBrush x:Key="SubtleText"   Color="#888888"/>
+        <SolidColorBrush x:Key="FaintText"    Color="#AAAAAA"/>
+        <SolidColorBrush x:Key="ListItemBg"   Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="StatusBg"     Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="StatusText"   Color="#555555"/>
+        <SolidColorBrush x:Key="Accent"       Color="#0078D4"/>
+        <SolidColorBrush x:Key="WarnText"     Color="#D83B01"/>
+
+        <!-- 样式 -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource TitleText}"/>
+        </Style>
+
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderC}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#106EBE"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#D83B01"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#A52A00"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16" Background="{DynamicResource WinBg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource TitleText}">
+                    GPU 名称切换器
+                </TextBlock>
+                <TextBlock FontSize="12" Foreground="{DynamicResource BodyText}" Margin="0,2,0,0">
+                    检测系统显卡并修改注册表名称以欺骗游戏/软件检测   |
+                    <Hyperlink Click="WhyLink_Click"
+                               Foreground="{DynamicResource Accent}" TextDecorations="None">
+                        <Hyperlink.Style>
+                            <Style TargetType="Hyperlink">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="TextDecorations" Value="Underline"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Hyperlink.Style>
+                        <Run Text="为什么？"/>
+                    </Hyperlink>
+                </TextBlock>
+            </StackPanel>
+            <Button Content="刷新检测" Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Click="Refresh_Click"/>
+        </Grid>
+
+        <!-- 主内容区 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左面板: 当前显卡 -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 标题行 + 显示隐藏按钮 -->
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <TextBlock Style="{StaticResource SectionHeader}"
+                                   VerticalAlignment="Center" Margin="0"
+                                   Text="当前显卡"/>
+                        <Button x:Name="ToggleHiddenBtn"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Height="24" FontSize="11" Padding="8,0"
+                                Cursor="Hand"
+                                Background="Transparent"
+                                Foreground="{DynamicResource Accent}"
+                                BorderThickness="0"
+                                Click="ToggleHidden_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="3" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#100078D4"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            显示隐藏设备
+                        </Button>
+                    </Grid>
+
+                    <!-- 真实 GPU 列表 -->
+                    <ListBox Grid.Row="1" x:Name="GpuListBox"
+                             SelectionChanged="GpuListBox_SelectionChanged"
+                             BorderThickness="0" Background="Transparent"
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="10,8" Margin="0,2"
+                                        CornerRadius="4"
+                                        Background="{DynamicResource ListItemBg}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" FontWeight="SemiBold"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TitleText}"
+                                                   Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis"/>
+
+                                        <TextBlock Grid.Row="1" Margin="0,4,0,0"
+                                                   FontSize="11" FontFamily="Consolas"
+                                                   Foreground="{DynamicResource SubtleText}">
+                                            <Run Text="PCIe: "/>
+                                            <Run Text="{Binding PcieAddress}"
+                                                 Foreground="{DynamicResource StatusText}"/>
+                                        </TextBlock>
+
+                                        <TextBlock Grid.Row="2" Margin="0,2,0,0"
+                                                   FontSize="11" FontFamily="Consolas"
+                                                   Foreground="{DynamicResource FaintText}">
+                                            <Run Text="VID:"/>
+                                            <Run Text="{Binding VendorId}"
+                                                 Foreground="{DynamicResource SubtleText}"/>
+                                            <Run Text="  DID:"/>
+                                            <Run Text="{Binding DeviceId}"
+                                                 Foreground="{DynamicResource SubtleText}"/>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- 隐藏设备面板 -->
+                    <Border Grid.Row="2" x:Name="HiddenPanel"
+                            Visibility="Collapsed"
+                            Margin="0,8,0,0" Padding="0,8,0,0"
+                            BorderBrush="{DynamicResource CardBorderC}"
+                            BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SubtleText}"
+                                       Margin="0,0,0,6"
+                                       Text="隐藏设备"/>
+                            <ListBox Grid.Row="1" x:Name="HiddenGpuListBox"
+                                     MaxHeight="160"
+                                     SelectionChanged="HiddenGpuListBox_SelectionChanged"
+                                     BorderThickness="0" Background="Transparent"
+                                     HorizontalContentAlignment="Stretch">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="10,6" Margin="0,1"
+                                                CornerRadius="4" Opacity="0.7"
+                                                Background="{DynamicResource ListItemBg}">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" FontSize="12"
+                                                           Foreground="{DynamicResource SubtleText}"
+                                                           Text="{Binding Name}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Row="1" FontSize="10"
+                                                           FontFamily="Consolas"
+                                                           Foreground="{DynamicResource FaintText}"
+                                                           Text="{Binding PcieAddress}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 分隔线 -->
+            <GridSplitter Grid.Column="1" Width="4"
+                          HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="Transparent"/>
+
+            <!-- 右面板: 伪装目标 -->
+            <Border Grid.Column="2" Style="{StaticResource CardBorder}" Margin="12,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Style="{StaticResource SectionHeader}"
+                               Text="伪装目标"/>
+
+                    <!-- 厂商筛选 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="厂商:" VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource BodyText}"
+                                   Margin="0,0,8,0"/>
+                        <CheckBox x:Name="ChkNvidia" Content="NVIDIA" IsChecked="True"
+                                  FontSize="12" Margin="0,0,10,0"
+                                  Foreground="{DynamicResource BodyText}"
+                                  Checked="VendorCheck_Changed" Unchecked="VendorCheck_Changed"/>
+                        <CheckBox x:Name="ChkAmd" Content="AMD" IsChecked="True"
+                                  FontSize="12" Margin="0,0,10,0"
+                                  Foreground="{DynamicResource BodyText}"
+                                  Checked="VendorCheck_Changed" Unchecked="VendorCheck_Changed"/>
+                        <CheckBox x:Name="ChkIntel" Content="Intel" IsChecked="True"
+                                  FontSize="12"
+                                  Foreground="{DynamicResource BodyText}"
+                                  Checked="VendorCheck_Changed" Unchecked="VendorCheck_Changed"/>
+                    </StackPanel>
+
+                    <!-- 搜索 -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <TextBox x:Name="SearchBox" Height="28" FontSize="12"
+                                 TextChanged="SearchBox_TextChanged"
+                                 Background="{DynamicResource ListItemBg}"
+                                 Foreground="{DynamicResource TitleText}"
+                                 BorderBrush="{DynamicResource CardBorderC}"/>
+                        <TextBlock IsHitTestVisible="False"
+                                   Text="搜索显卡名称..." FontSize="12"
+                                   Foreground="{DynamicResource FaintText}"
+                                   VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <!-- 可选的伪装名称列表 -->
+                    <ListBox Grid.Row="3" x:Name="PresetListBox"
+                             SelectionChanged="PresetListBox_SelectionChanged"
+                             BorderThickness="0" Background="Transparent"
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="10,6" Margin="0,1"
+                                        CornerRadius="4"
+                                        Background="{DynamicResource ListItemBg}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock FontWeight="SemiBold" FontSize="11"
+                                                   Width="50"
+                                                   Foreground="{Binding Vendor,
+                                                       Converter={StaticResource VendorColor}}"
+                                                   Text="{Binding Vendor}"/>
+                                        <TextBlock Grid.Column="1" FontSize="12"
+                                                   Foreground="{DynamicResource TitleText}"
+                                                   Text="{Binding Name}"
+                                                   Margin="8,0,0,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- 自定义名称 -->
+                    <Grid Grid.Row="4" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="自定:" VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource BodyText}"
+                                   Margin="0,0,6,0"/>
+                        <TextBox Grid.Column="1" x:Name="CustomNameBox"
+                                 Height="28" FontSize="12"
+                                 Background="{DynamicResource ListItemBg}"
+                                 Foreground="{DynamicResource TitleText}"
+                                 BorderBrush="{DynamicResource CardBorderC}"
+                                 TextChanged="CustomNameBox_TextChanged"/>
+                    </Grid>
+
+                    <!-- 操作按钮 -->
+                    <StackPanel Grid.Row="5" Orientation="Horizontal"
+                                HorizontalAlignment="Right" Margin="0,14,0,0">
+                        <Button Content="恢复原始名称" Style="{StaticResource PrimaryButton}"
+                                Background="#666" Click="Restore_Click"/>
+                        <Button Content="应用修改" Style="{StaticResource PrimaryButton}"
+                                Click="Apply_Click" x:Name="ApplyButton" IsEnabled="False"/>
+                        <Button Content="重启系统" Style="{StaticResource DangerButton}"
+                                Click="Reboot_Click" x:Name="RebootButton"
+                                Visibility="Collapsed"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 状态栏 -->
+        <Border Grid.Row="2" Margin="0,12,0,0" Padding="10,6"
+                CornerRadius="4" Background="{DynamicResource StatusBg}">
+            <Grid>
+                <TextBlock x:Name="StatusText" FontSize="12"
+                           Foreground="{DynamicResource StatusText}"
+                           VerticalAlignment="Center"
+                           Text="就绪 — 请选择左侧显卡，再从右侧选择伪装目标。"/>
+                <TextBlock x:Name="NeedRestartText" FontSize="12"
+                           Foreground="{DynamicResource WarnText}"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Visibility="Collapsed"
+                           Text="⚠ 已应用修改，需重启后生效"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,100 @@
+<Window x:Class="GpuSpoofer.WhyDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="为什么需要管理员权限？" Width="520" Height="440"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        FontFamily="Microsoft YaHei UI"
+        ShowInTaskbar="False"
+        WindowStyle="ToolWindow">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 说明内容 -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="#1A1A1A"
+                           Margin="0,0,0,12" TextWrapping="Wrap">
+                    关于显卡名称伪装
+                </TextBlock>
+
+                <TextBlock FontSize="13" Foreground="#333" LineHeight="24"
+                           TextWrapping="Wrap" Margin="0,0,0,10">
+                    本工具通过直接修改 Windows 注册表中的显卡设备描述（DeviceDesc），
+                    将显卡名称伪装为另一型号，以欺骗游戏引擎的默认配置策略。
+                </TextBlock>
+
+                <Border Background="#F5F8FF" CornerRadius="6" Padding="14,10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#0078D4"
+                                   Margin="0,0,0,6" TextWrapping="Wrap">
+                            为什么有效？
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="#444" LineHeight="22"
+                                   TextWrapping="Wrap">
+                            部分游戏（如《三角洲行动》）的引擎会根据显卡型号
+                            自动设定渲染质量等级。当检测到高端显卡时，引擎会启用更高的
+                            默认画质和效果，导致 GPU 负载加重。
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="#444" LineHeight="22"
+                                   TextWrapping="Wrap" Margin="0,6,0,0">
+                            将显卡名称伪装为低端型号后，引擎误判硬件能力，
+                            自动降低渲染细节，从而实现：
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="#0078D4" LineHeight="24"
+                                   Margin="20,4,0,0" TextWrapping="Wrap">
+                            · GPU 占用率下降约 10%<LineBreak/>
+                            · 平均帧与 Low 帧提升<LineBreak/>
+                            · 渲染延迟降低，画面更流畅
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFF8E7" CornerRadius="6" Padding="14,10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#D83B01"
+                                   Margin="0,0,0,6" TextWrapping="Wrap">
+                            为什么需要管理员权限？
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="#444" LineHeight="22"
+                                   TextWrapping="Wrap">
+                            显卡名称存储在注册表
+                            HKLM\SYSTEM\CurrentControlSet\Enum\PCI 下，
+                            此路径属于系统级配置，Windows 要求以管理员身份运行
+                            才能写入。本工具每次修改前会自动备份原始值，
+                            可随时恢复。
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock FontSize="12" Foreground="#888" LineHeight="20"
+                           TextWrapping="Wrap" Margin="0,4,0,0">
+                    注意事项：此操作为绕过引擎默认配置的社区手段，
+                    并非所有机器都能获得相同的帧数提升。修改前会自动备份，
+                    建议在游戏优化加速工具辅助下使用，以保证稳定性。
+                </TextBlock>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 关闭按钮 -->
+        <Button Grid.Row="1" Content="我知道了"
+                HorizontalAlignment="Right" Margin="0,16,0,0" Click="Close_Click"
+                Height="34" MinWidth="100" Padding="20,0"
+                FontSize="13" Cursor="Hand"
+                Background="#0078D4" Foreground="White" BorderThickness="0">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+    </Grid>
+</Window>

@@ -1,0 +1,10 @@
+<Application x:Class="GpuSpoofer.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:GpuSpoofer"
+             xmlns:conv="clr-namespace:GpuSpoofer.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <conv:VendorColorConverter x:Key="VendorColor"/>
+    </Application.Resources>
+</Application>
